@@ -95,13 +95,14 @@ class CCXTStore(with_metaclass(MetaSingleton, object)):
         '''Returns broker with *args, **kwargs from registered ``BrokerCls``'''
         return cls.BrokerCls(*args, **kwargs)
 
-    def __init__(self, exchange, currency, config, retries, debug=False, sandbox=False):
+    def __init__(self, exchange, currency, config, retries, debug=False, verbose=False, sandbox=False):
         self.exchange = getattr(ccxt, exchange)(config)
         if sandbox:
             self.exchange.set_sandbox_mode(True)
         self.currency = currency
         self.retries = retries
         self.debug = debug
+        self.verbose = verbose
         balance = self.exchange.fetch_balance() if 'secret' in config else 0
         try:
             if balance == 0 or not balance['free'][currency]:
@@ -139,7 +140,7 @@ class CCXTStore(with_metaclass(MetaSingleton, object)):
         @wraps(method)
         def retry_method(self, *args, **kwargs):
             for i in range(self.retries):
-                if self.debug:
+                if self.verbose:
                     print('{} - {} - Attempt {}'.format(datetime.now(), method.__name__, i))
                 time.sleep(self.exchange.rateLimit / 1000)
                 try:
@@ -170,9 +171,10 @@ class CCXTStore(with_metaclass(MetaSingleton, object)):
         return self._value
         # return self.getvalue(currency)
 
-    @retry
+    # @retry
     def create_order(self, symbol, order_type, side, amount, price, params):
         # returns the order
+        print(symbol, order_type, side, amount, price, params)
         return self.exchange.create_order(symbol=symbol, type=order_type, side=side,
                                           amount=amount, price=price, params=params)
 
@@ -186,7 +188,7 @@ class CCXTStore(with_metaclass(MetaSingleton, object)):
 
     @retry
     def fetch_ohlcv(self, symbol, timeframe, since, limit, params={}):
-        if self.debug:
+        if self.verbose:
             print('Fetching: {}, TF: {}, Since: {}, Limit: {}'.format(symbol, timeframe, since, limit))
         return self.exchange.fetch_ohlcv(symbol, timeframe=timeframe, since=since, limit=limit, params=params)
 
