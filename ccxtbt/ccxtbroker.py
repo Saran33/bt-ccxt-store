@@ -110,7 +110,7 @@ class CCXTBroker(with_metaclass(MetaCCXTBroker, BrokerBase)):
             'value': 'canceled'}
     }
 
-    def __init__(self, broker_mapping=None, debug=False, **kwargs):
+    def __init__(self, broker_mapping=None, debug=False, verbose=False, **kwargs):
         super(CCXTBroker, self).__init__()
 
         if broker_mapping is not None:
@@ -130,6 +130,8 @@ class CCXTBroker(with_metaclass(MetaCCXTBroker, BrokerBase)):
         self.positions = collections.defaultdict(Position)
 
         self.debug = debug
+        print("DEBUG", self.debug)
+        self.verbose = verbose
         self.indent = 4  # For pretty printing dictionaries
 
         self.notifs = queue.Queue()  # holds orders which are notified
@@ -188,8 +190,8 @@ class CCXTBroker(with_metaclass(MetaCCXTBroker, BrokerBase)):
         return pos
 
     def next(self):
-        if self.debug:
-            print('Broker next() called')
+        # if self.debug:
+        #     print('Broker next() called')
 
         for o_order in list(self.open_orders):
             oID = o_order.ccxt_order['id']
@@ -235,6 +237,7 @@ class CCXTBroker(with_metaclass(MetaCCXTBroker, BrokerBase)):
     def _submit(self, owner, data, exectype, side, amount, price, params):
         if amount == 0 or price == 0:
         # do not allow failing orders
+            print("No price or Q specified")
             return None
         order_type = self.order_types.get(exectype) if exectype else 'market'
         created = int(data.datetime.datetime(0).timestamp()*1000)
@@ -246,10 +249,13 @@ class CCXTBroker(with_metaclass(MetaCCXTBroker, BrokerBase)):
         else:
             try:
                 # all params are exchange specific: https://github.com/ccxt/ccxt/wiki/Manual#custom-order-params
-                params['created'] = created  # Add timestamp of order creation for backtesting
                 ret_ord = self.store.create_order(symbol=data.p.dataname, order_type=order_type, side=side,
                                                   amount=amount, price=price, params=params)
-            except:
+                params['created'] = created  # Add timestamp of order creation for backtesting
+
+            except Exception as e:
+                print(e)
+                print("ORDER FAILED")
                 # save some API calls after failure
                 self.use_order_params = False
                 return None
@@ -282,6 +288,8 @@ class CCXTBroker(with_metaclass(MetaCCXTBroker, BrokerBase)):
     def cancel(self, order):
 
         oID = order.ccxt_order['id']
+        if self.debug:
+            print("oID to cancel:", oID)
 
         if self.debug:
             print('Broker cancel() called')
@@ -290,6 +298,8 @@ class CCXTBroker(with_metaclass(MetaCCXTBroker, BrokerBase)):
         # check first if the order has already been filled otherwise an error
         # might be raised if we try to cancel an order that is not open.
         ccxt_order = self.store.fetch_order(oID, order.data.p.dataname)
+        if self.debug:
+            print("ccxt order to cancel:", ccxt_order)
 
         if self.debug:
             print(json.dumps(ccxt_order, indent=self.indent))
