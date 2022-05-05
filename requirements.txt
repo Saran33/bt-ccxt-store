@@ -1,2 +1,2 @@
 backtrader
-ccxt
+ccxt @ git+https://github.com/Saran33/ccxt.git#egg=ccxt\&subdirectory=python
