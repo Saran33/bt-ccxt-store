@@ -9,5 +9,5 @@ setup(
    author_email='dave@backtest-rookies.com',
    license='MIT',
    packages=['ccxtbt'],  
-   install_requires=['backtrader',"ccxt @ git+https://github.com/Saran33/ccxt.git#egg=ccxt\&subdirectory=python"],
+   install_requires=['backtrader',"ccxt"],
 )
